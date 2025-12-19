@@ -1,205 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Rick Roller!</title>
   <style>
     html,body { height:100%; margin:0; background:black; }
     #player { position:fixed; inset:0; width:100vw; height:100vh; }
-    .overlay {
-      position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-      background:rgba(0,0,0,0.6); color:#fff; z-index:20;
-    }
-    .panel {
-      text-align:center; padding:1.25rem 1.5rem; border-radius:12px;
-      background:rgba(0,0,0,0.4); backdrop-filter: blur(4px);
-    }
-    .play-btn {
-      background:#ff3860; border:0; color:white; padding:0.75rem 1.25rem;
-      font-size:1.05rem; border-radius:8px; cursor:pointer;
-      box-shadow:0 6px 18px rgba(0,0,0,0.4);
-    }
-    .play-btn:active { transform:translateY(1px); }
-    .hidden { display:none; }
   </style>
 </head>
 <body>
-  <!-- Player container (no autoplay set initially) -->
-  <div id="player" aria-hidden="true"></div>
-
-  <!-- Overlay shown until either programmatic play succeeds or user clicks fallback -->
-  <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="title">
-    <div class="panel">
-      <h1 id="title" style="margin:0 0 .5rem">Rick Roller!</h1>
-      <p id="status" style="margin:0 0 1rem">Preparing player — attempting to start with sound automatically.</p>
-      <button class="play-btn" id="play-btn">Play (fallback)</button>
-    </div>
-  </div>
+  <div id="player"></div>
 
   <script>
-    const VIDEO_ID = 'dQw4w9WgXcQ';
-    let player;
-    let programmaticAttempted = false;
-
-    // Load YouTube IFrame API
-    (function loadYouTubeAPI(){
+    // Load the YouTube IFrame API
+    (function loadYT() {
       const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
+      tag.src = "https://www.youtube.com/iframe_api";
       document.head.appendChild(tag);
     })();
 
-    // This function is called by the YouTube API when ready
+    // Create the player when the API is ready. Minimal code — no overlays or extra UI.
     function onYouTubeIframeAPIReady() {
-      // Create player with NO autoplay. We purposefully do not request autoplay on load.
-      player = new YT.Player('player', {
-        videoId: VIDEO_ID,
+      new YT.Player('player', {
+        height: '100%',
+        width: '100%',
+        videoId: 'dQw4w9WgXcQ',
         playerVars: {
-          autoplay: 0,      // do not autoplay on creation
-          controls: 0,
-          loop: 1,
-          playlist: VIDEO_ID,
-          modestbranding: 1,
+          autoplay: 0,        // video appears but does not auto-play
+          controls: 1,        // show controls so user can play/pause
           rel: 0,
+          modestbranding: 1,
           playsinline: 1
         },
         events: {
-          onReady: onPlayerReady,
-          onStateChange: onPlayerStateChange
+            onReady: () => {
+                setTimeout(playVideo, 200);
+            }
         }
       });
     }
-
-    function onPlayerReady(event) {
-      // Try to programmatically unmute and play shortly after load.
-      // Note: many browsers will block programmatic unmuted playback without a real user gesture.
-      // We still attempt it because you requested automatic play/unmute after load.
-      attemptProgrammaticPlay();
+    function playVideo() {
+        videoIframe = document.getElementById('player');
+        videoIframe.click();
     }
-
-    function onPlayerStateChange(e) {
-      // If playback starts, hide the overlay
-      if (e.data === YT.PlayerState.PLAYING) {
-        hideOverlay('Playing');
-      }
-    }
-
-    function attemptProgrammaticPlay() {
-      if (programmaticAttempted) return;
-      programmaticAttempted = true;
-
-      const status = document.getElementById('status');
-      status.textContent = 'Attempting automatic unmuted playback...';
-
-      // First attempt: unMute + playVideo directly
-      try {
-        player.unMute();
-        const playResult = player.playVideo();
-        // playResult may be a Promise in some browsers; attach catch to detect failure
-        if (playResult && typeof playResult.then === 'function') {
-          playResult.then(() => {
-            // started playing
-            hideOverlay('Playing');
-          }).catch(() => {
-            // failed; show fallback message and leave overlay visible
-            status.textContent = 'Automatic play blocked by browser. Click Play to start with sound.';
-            // keep overlay and fallback button
-          });
-        } else {
-          // Older API may not return a Promise — assume success and hide overlay after brief delay if playing
-          setTimeout(() => {
-            // If still not playing, show fallback
-            if (player.getPlayerState() !== YT.PlayerState.PLAYING) {
-              status.textContent = 'Automatic play blocked by browser. Click Play to start with sound.';
-            }
-          }, 500);
-        }
-      } catch (err) {
-        // Likely blocked — update status and keep overlay for manual play
-        status.textContent = 'Automatic play blocked by browser. Click Play to start with sound.';
-      }
-
-      // As a secondary approach, try to synthesize a click on the fallback button (note: synthetic clicks usually do NOT count as user gestures)
-      const fallback = document.getElementById('play-btn');
-      try {
-        fallback.click();
-      } catch (e) {
-        // ignore
-      }
-    }
-
-    // Manual fallback: when user clicks, perform unmuted playback (this is a true user gesture and should succeed)
-    document.getElementById('play-btn').addEventListener('click', () => {
-      const status = document.getElementById('status');
-      status.textContent = 'Starting playback...';
-
-      if (player && typeof player.unMute === 'function') {
-        try {
-          player.unMute();
-          player.playVideo();
-          hideOverlay('Playing');
-          return;
-        } catch (e) {
-          // continue to recreate player approach
-        }
-      }
-
-      // If player isn't ready or the above failed, recreate player during the user gesture with autoplay enabled
-      const container = document.getElementById('player');
-      container.innerHTML = '';
-      player = new YT.Player('player', {
-        videoId: VIDEO_ID,
-        playerVars: {
-          autoplay: 1,
-          mute: 0, // unmuted creation during user gesture
-          controls: 0,
-          loop: 1,
-          playlist: VIDEO_ID,
-          modestbranding: 1,
-          rel: 0,
-          playsinline: 1
-        },
-        events: {
-          onReady: function(e) { try { e.target.playVideo(); } catch (ex) { /* ignore */ } }
-        }
-      });
-
-      // overlay will be removed once playback state changes to PLAYING (onPlayerStateChange)
-    });
-
-    function hideOverlay(message) {
-      const overlay = document.getElementById('overlay');
-      if (!overlay) return;
-      overlay.parentNode.removeChild(overlay);
-      // Optionally log
-      console.log('Overlay removed:', message);
-    }
-
-    // If the API isn't available yet by DOMContentLoaded, set a timeout to attempt programmatic play once it is.
-    window.addEventListener('DOMContentLoaded', () => {
-      // Try programmatic play after a short delay to allow API to initialize.
-      setTimeout(() => {
-        if (typeof YT !== 'undefined' && YT && YT.Player) {
-          if (!player) {
-            // If API is ready but player hasn't been created yet, create it now (no autoplay) and then attempt play
-            onYouTubeIframeAPIReady();
-          } else {
-            attemptProgrammaticPlay();
-          }
-        } else {
-          // API not ready yet — attempt again shortly
-          const waitForAPI = setInterval(() => {
-            if (typeof YT !== 'undefined' && YT && YT.Player) {
-              clearInterval(waitForAPI);
-              if (!player) onYouTubeIframeAPIReady();
-              attemptProgrammaticPlay();
-            }
-          }, 250);
-          // stop trying after 10s
-          setTimeout(() => clearInterval(waitForAPI), 10000);
-        }
-      }, 300);
-    });
   </script>
 </body>
 </html>
