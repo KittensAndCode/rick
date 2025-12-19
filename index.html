@@ -42,7 +42,8 @@
     }
     function playVideo() {
         videoIframe = document.getElementById('player');
-        videoIframe.click();
+        videoHTML = videoIframe.firstChild;
+        console.log(videoHTML);
     }
   </script>
 </body>
