@@ -6,19 +6,60 @@
   <title>Rick Roller!</title>
   <style>
     html,body { height:100%; margin:0; }
-    .video-wrap { position:fixed; top:0; left:0; width:100%; height:100%; overflow:hidden; }
-    .video-wrap iframe { width:100vw; height:100vh; border:0; }
+    .video-wrap { position:fixed; top:0; left:0; width:100%; height:100%; overflow:hidden; background:black; }
+    .video-wrap iframe { width:100vw; height:100vh; border:0; display:block; }
+    .overlay {
+      position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); color:#fff; z-index:10;
+    }
+    .play-btn {
+      background:#ff3860; border:0; color:white; padding:1rem 1.5rem; font-size:1.25rem; border-radius:8px; cursor:pointer;
+      box-shadow:0 6px 18px rgba(0,0,0,0.4);
+    }
+    .play-btn:active { transform:translateY(1px); }
   </style>
 </head>
 <body>
-  <div class="video-wrap">
-    <iframe
-      src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1&controls=0&rel=0&modestbranding=1&loop=1&playlist=dQw4w9WgXcQ&playsinline=1"
-      title="Rick Astley - Never Gonna Give You Up (Video)"
-      frameborder="0"
-      allow="autoplay; encrypted-media; picture-in-picture"
-      allowfullscreen>
-    </iframe>
+  <div class="video-wrap" id="video-wrap"></div>
+
+  <div class="overlay" id="overlay">
+    <div style="text-align:center">
+      <h1 style="margin:0 0 .5rem">Rick Roller!</h1>
+      <p style="margin:0 0 1rem; opacity:0.9">Click to play with sound</p>
+      <button class="play-btn" id="play-btn">Play (unmuted)</button>
+    </div>
   </div>
+
+  <script>
+    const VIDEO_ID = 'dQw4w9WgXcQ';
+    const overlay = document.getElementById('overlay');
+    const videoWrap = document.getElementById('video-wrap');
+    const playBtn = document.getElementById('play-btn');
+
+    function createUnmutedIframe() {
+      // Build the embed URL without mute=1
+      const src = `https://www.youtube.com/embed/${VIDEO_ID}?autoplay=1&controls=0&rel=0&modestbranding=1&loop=1&playlist=${VIDEO_ID}&playsinline=1`;
+      const iframe = document.createElement('iframe');
+      iframe.src = src;
+      iframe.title = 'Rick Astley - Never Gonna Give You Up (Video)';
+      iframe.frameBorder = '0';
+      iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
+      iframe.allowFullscreen = true;
+      iframe.style.width = '100vw';
+      iframe.style.height = '100vh';
+      videoWrap.appendChild(iframe);
+    }
+
+    playBtn.addEventListener('click', () => {
+      // User gesture — browsers will typically allow unmuted playback after a click
+      createUnmutedIframe();
+      // remove the overlay
+      overlay.parentNode.removeChild(overlay);
+    });
+
+    // Also allow pressing space/enter when the overlay is focused
+    playBtn.addEventListener('keyup', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') playBtn.click();
+    });
+  </script>
 </body>
 </html>
